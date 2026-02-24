@@ -25,6 +25,17 @@ const int FRAME_WIDTH = 339;
 const int FRAME_HEIGHT = 273;
 const int FRAME_SPEED = 6;
 
+const int RUN_FRAME_COUNT = 8;
+const int RUN_FRAME_WIDTH = FRAME_WIDTH;
+const int RUN_FRAME_HEIGHT = FRAME_HEIGHT;
+const int RUN_FRAME_SPEED = 12;
+
+const int JUMP_FRAME_COUNT = 11;
+const int JUMP_FRAME_WIDTH = FRAME_WIDTH;
+const int JUMP_FRAME_HEIGHT = FRAME_HEIGHT;
+const float JUMP_DURATION = 1.0f;
+const float JUMP_HEIGHT = (float)WORLD_HEIGHT / 2.0f;
+
 // NPC sprites
 const int NPC_FRAME_COUNT = 2;
 const int NPC_FRAME_WIDTH = 316;
@@ -43,12 +54,6 @@ const int CATCRY_FRAME_COUNT = 60;
 const int CATCRY_FRAME_WIDTH = 100;
 const int CATCRY_FRAME_HEIGHT = 125;
 const int CATCRY_FRAME_SPEED = 12;
-
-const int JUMP_FRAME_COUNT = 11;
-const int JUMP_FRAME_WIDTH = FRAME_WIDTH;
-const int JUMP_FRAME_HEIGHT = FRAME_HEIGHT;
-const float JUMP_DURATION = 1.0f;
-const float JUMP_HEIGHT = (float)WORLD_HEIGHT / 2.0f;
 
 struct Dialogue
 {
@@ -136,8 +141,14 @@ int main(void)
     InitAudioDevice();
 
     // Assets
-    Texture2D stickmanTexture = LoadTexture("catwalk.png");
-    if (stickmanTexture.id == 0) cerr << "ERROR: Could not load texture 'catwalk.png'." << endl;
+    Texture2D catWalkTexture = LoadTexture("catwalk.png");
+    if (catWalkTexture.id == 0) cerr << "ERROR: Could not load texture 'catwalk.png'." << endl;
+
+    Texture2D catRunTexture = LoadTexture("catrun.png");
+    if (catRunTexture.id == 0) cerr << "ERROR: Could not load texture 'catrun.png'." << endl;
+
+    Texture2D catJumpTexture = LoadTexture("catjump.png");
+    if (catJumpTexture.id == 0) cerr << "ERROR: Could not load texture 'catjump.png'." << endl;
 
     Texture2D npcTexture = LoadTexture("npc.png");
     if (npcTexture.id == 0) cerr << "ERROR: Could not load texture 'npc.png'." << endl;
@@ -150,9 +161,6 @@ int main(void)
 
     Texture2D catCryTexture = LoadTexture("cat-cry.png");
     if (catCryTexture.id == 0) cerr << "ERROR: Could not load texture 'cat-cry.png'." << endl;
-
-    Texture2D catJumpTexture = LoadTexture("catjump.png");
-    if (catJumpTexture.id == 0) cerr << "ERROR: Could not load texture 'catjump.png'." << endl;
 
     // Load font
     int codepointsCount = 0;
@@ -181,6 +189,36 @@ int main(void)
     Sound crunchSound = { 0 };
     if (FileExists("crunch.wav")) crunchSound = LoadSound("crunch.wav");
     else cerr << "WARNING: 'crunch.wav' not found." << endl;
+
+    Sound jumpSound = { 0 };
+    if (FileExists("jump.wav")) jumpSound = LoadSound("jump.wav");
+    else cerr << "WARNING: 'jump.wav' not found." << endl;
+
+    Sound sprintSound = { 0 };
+    if (FileExists("sprint.wav")) sprintSound = LoadSound("sprint.wav");
+    else cerr << "WARNING: 'sprint.wav' not found." << endl;
+
+    // Background music (looping)
+    Music bgMusic = { 0 };
+    bool bgMusicLoaded = false;
+    if (FileExists("BlindSpots.wav"))
+    {
+        bgMusic = LoadMusicStream("BlindSpots.wav");
+        bgMusicLoaded = (bgMusic.ctxType != 0 || bgMusic.frameCount != 0); // best-effort check
+        if (bgMusicLoaded)
+        {
+            PlayMusicStream(bgMusic);
+            SetMusicVolume(bgMusic, 0.5f); // adjust background volume as desired
+        }
+        else
+        {
+            cerr << "WARNING: Failed to load 'BlindSpots.wav'." << endl;
+        }
+    }
+    else
+    {
+        cerr << "WARNING: 'BlindSpots.wav' not found." << endl;
+    }
 
     Rectangle player = {
         0.0f,
@@ -260,10 +298,12 @@ int main(void)
         "Jak chronić hydrosferę? Oszczędzanie wody, oczyszczanie ścieków i redukcja zanieczyszczeń są podstawowe.",
         "Inwestycje w odnawialne źródła, zrównoważone rolnictwo i ochrona terenów przybrzeżnych są kluczowe.",
         "Edukacja i współpraca międzynarodowa umożliwiają długotrwałe rozwiązania dla całej hydrosfery."
-        }, 0));
+        }, 0, (meow1Sound.frameCount != 0 ? &meow1Sound : nullptr)));
 
     int frameCounter = 0;
     int currentFrame = 0;
+    int runFrameCounter = 0;
+    int currentRunFrame = 0;
     float frameDirection = 1.0f;
     bool isMoving = false;
 
@@ -307,6 +347,14 @@ int main(void)
     {
         float dt = GetFrameTime();
         isMoving = false;
+
+        // Update background music stream each frame (keeps it playing)
+        if (bgMusicLoaded)
+        {
+            UpdateMusicStream(bgMusic);
+            // Ensure it keeps playing (if it stopped for some reason)
+            if (!IsMusicStreamPlaying(bgMusic)) PlayMusicStream(bgMusic);
+        }
 
         // cat-crunch animation
         catCrunchTimer += dt;
@@ -353,7 +401,9 @@ int main(void)
         }
 
         float speedMultiplier = 1.0f;
-        if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT)) speedMultiplier = 2.0f;
+        if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT)) {
+            speedMultiplier = 3.0f;
+        }
 
         // Movement (disabled during dialogue)
         if (activeNPC == -1)
@@ -371,37 +421,73 @@ int main(void)
                 isMoving = true;
             }
 
-            if (!isJumping && (IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)))
+            if ((IsKeyPressed(KEY_LEFT_SHIFT) || IsKeyPressed(KEY_RIGHT_SHIFT)) && sprintSound.frameCount != 0) 
+            {
+                PlaySound(sprintSound);
+            }
+            
+            if (!isJumping && (IsKeyDown(KEY_SPACE) || IsKeyDown(KEY_W) || IsKeyDown(KEY_UP)))
             {
                 isJumping = true;
                 jumpTimer = 0.0f;
                 jumpFrame = 0;
+
+                // Play jump sound once at jump start
+                if (jumpSound.frameCount != 0) PlaySound(jumpSound);
             }
         }
 
         if (player.x < 0) player.x = 0;
         if (player.x + player.width > WORLD_WIDTH) player.x = WORLD_WIDTH - player.width;
 
-        // Walking animation
+        // Walking / Running animation
         if (!isJumping)
         {
             if (isMoving)
             {
-                frameCounter++;
-                float effectiveFrameSpeed = FRAME_SPEED * speedMultiplier;
-                int frameDelay = (int)round(60.0f / effectiveFrameSpeed);
-                if (frameDelay < 1) frameDelay = 1;
-                if (frameCounter >= frameDelay)
+                if (speedMultiplier > 1.0f)
                 {
+                    // Running animation
+                    runFrameCounter++;
+                    float effectiveRunSpeed = RUN_FRAME_SPEED;
+                    int runFrameDelay = (int)round(60.0f / effectiveRunSpeed);
+                    if (runFrameDelay < 1) runFrameDelay = 1;
+                    if (runFrameCounter >= runFrameDelay)
+                    {
+                        runFrameCounter = 0;
+                        currentRunFrame++;
+                        if (currentRunFrame >= RUN_FRAME_COUNT) currentRunFrame = 0;
+                    }
+
+                    // reset walk counters to keep state consistent
+                    currentFrame = 0;
                     frameCounter = 0;
-                    currentFrame++;
-                    if (currentFrame >= FRAME_COUNT) currentFrame = 0;
+                }
+                else
+                {
+                    // Walking animation
+                    frameCounter++;
+                    float effectiveFrameSpeed = FRAME_SPEED;
+                    int frameDelay = (int)round(60.0f / effectiveFrameSpeed);
+                    if (frameDelay < 1) frameDelay = 1;
+                    if (frameCounter >= frameDelay)
+                    {
+                        frameCounter = 0;
+                        currentFrame++;
+                        if (currentFrame >= FRAME_COUNT) currentFrame = 0;
+                    }
+
+                    // reset run counters to keep state consistent
+                    currentRunFrame = 0;
+                    runFrameCounter = 0;
                 }
             }
             else
             {
                 currentFrame = 0;
                 frameCounter = 0;
+                currentRunFrame = 0;
+                runFrameCounter = 0;
             }
         }
 
@@ -656,6 +742,23 @@ int main(void)
             };
             DrawTexturePro(catJumpTexture, sourceRec, destRec, { 0, 0 }, 0.0f, WHITE);
         }
+        else if (speedMultiplier > 1.0f && isMoving && catRunTexture.id != 0)
+        {
+            // Running animation draw
+            Rectangle sourceRec = {
+                (float)currentRunFrame * (float)RUN_FRAME_WIDTH,
+                0.0f,
+                (float)RUN_FRAME_WIDTH * frameDirection,
+                (float)RUN_FRAME_HEIGHT
+            };
+            Rectangle destRec = {
+                player.x,
+                player.y,
+                player.width,
+                player.height
+            };
+            DrawTexturePro(catRunTexture, sourceRec, destRec, { 0, 0 }, 0.0f, WHITE);
+        }
         else
         {
             Rectangle sourceRec = {
@@ -670,7 +773,7 @@ int main(void)
                 player.width,
                 player.height
             };
-            DrawTexturePro(stickmanTexture, sourceRec, destRec, { 0, 0 }, 0.0f, WHITE);
+            DrawTexturePro(catWalkTexture, sourceRec, destRec, { 0, 0 }, 0.0f, WHITE);
         }
 
         EndMode2D();
@@ -699,7 +802,8 @@ int main(void)
     }
 
     // Cleanup
-    UnloadTexture(stickmanTexture);
+    UnloadTexture(catWalkTexture);
+    UnloadTexture(catRunTexture);
     UnloadTexture(npcTexture);
     UnloadTexture(catPopTexture);
     UnloadTexture(catCrunchTexture);
@@ -711,6 +815,16 @@ int main(void)
     if (meow2Sound.frameCount != 0) UnloadSound(meow2Sound);
     if (popSound.frameCount != 0) UnloadSound(popSound);
     if (crunchSound.frameCount != 0) UnloadSound(crunchSound);
+    if (jumpSound.frameCount != 0) UnloadSound(jumpSound);
+    if (sprintSound.frameCount != 0) UnloadSound(sprintSound);
+
+    // Stop and unload background music
+    if (bgMusicLoaded)
+    {
+        StopMusicStream(bgMusic);
+        UnloadMusicStream(bgMusic);
+    }
+
     CloseAudioDevice();
 
     CloseWindow();
