@@ -150,40 +150,40 @@ int main(void)
     InitAudioDevice();
 
     // Assets
-    Texture2D catWalkTexture = LoadTexture("walk.png");
+    Texture2D catWalkTexture = LoadTexture("assets/player/walk.png");
     if (catWalkTexture.id == 0) cerr << "ERROR: Could not load texture 'walk.png'." << endl;
 
-    Texture2D catRunTexture = LoadTexture("run.png");
+    Texture2D catRunTexture = LoadTexture("assets/player/run.png");
     if (catRunTexture.id == 0) cerr << "ERROR: Could not load texture 'run.png'." << endl;
 
-    Texture2D catJumpTexture = LoadTexture("jump.png");
+    Texture2D catJumpTexture = LoadTexture("assets/player/jump.png");
     if (catJumpTexture.id == 0) cerr << "ERROR: Could not load texture 'jump.png'." << endl;
+    
+    Texture2D happyTexture = LoadTexture("assets/player/happy.png");
+    if (happyTexture.id == 0) cerr << "WARNING: Could not load texture 'happy.png'." << endl;
 
-    Texture2D npcTexture = LoadTexture("npc.png");
-    if (npcTexture.id == 0) cerr << "ERROR: Could not load texture 'npc.png'." << endl;
+    Texture2D npcTexture = LoadTexture("assets/npc/gatito.png");
+    if (npcTexture.id == 0) cerr << "ERROR: Could not load texture 'gatito.png'." << endl;
 
-    Texture2D catPopTexture = LoadTexture("cat-pop.png");
-    if (catPopTexture.id == 0) cerr << "ERROR: Could not load texture 'cat-pop.png'." << endl;
+    Texture2D catPopTexture = LoadTexture("assets/npc/catPop.png");
+    if (catPopTexture.id == 0) cerr << "ERROR: Could not load texture 'catPop.png'." << endl;
 
-    Texture2D catCrunchTexture = LoadTexture("cat-crunch.png");
-    if (catCrunchTexture.id == 0) cerr << "ERROR: Could not load texture 'cat-crunch.png'." << endl;
+    Texture2D catCrunchTexture = LoadTexture("assets/npc/catCrunch.png");
+    if (catCrunchTexture.id == 0) cerr << "ERROR: Could not load texture 'catCrunch.png'." << endl;
 
-    Texture2D catCryTexture = LoadTexture("cat-cry.png");
-    if (catCryTexture.id == 0) cerr << "ERROR: Could not load texture 'cat-cry.png'." << endl;
+    Texture2D catCryTexture = LoadTexture("assets/npc/catCry.png");
+    if (catCryTexture.id == 0) cerr << "ERROR: Could not load texture 'catCry.png'." << endl;
 
-    Texture2D catSpinningTexture = LoadTexture("cat-spinning.png");
-    if (catSpinningTexture.id == 0) cerr << "ERROR: Could not load texture 'cat-spinning.png'." << endl;
+    Texture2D catSpinningTexture = LoadTexture("assets/npc/catSpinning.png");
+    if (catSpinningTexture.id == 0) cerr << "ERROR: Could not load texture 'catSpinning.png'." << endl;
 
-    Texture2D grassTexture = LoadTexture("grass.png");
+    Texture2D grassTexture = LoadTexture("assets/level/grass.png");
     if (grassTexture.id == 0) cerr << "WARNING: Could not load texture 'grass.png'." << endl;
 
-    Texture2D finishTexture = LoadTexture("finish.png");
+    Texture2D finishTexture = LoadTexture("assets/level/finish.png");
     if (finishTexture.id == 0) cerr << "WARNING: Could not load texture 'finish.png'." << endl;
 
-    Texture2D happyTexture = LoadTexture("kitty-happy.png");
-    if (happyTexture.id == 0) cerr << "WARNING: Could not load texture 'kitty-happy.png'." << endl;
-
-    Texture2D congratsTexture = LoadTexture("congratulation.png");
+    Texture2D congratsTexture = LoadTexture("assets/level/congratulation.png");
     if (congratsTexture.id == 0) cerr << "WARNING: Could not load texture 'congratulation.png'." << endl;
 
     // Biome background textures
@@ -192,11 +192,11 @@ int main(void)
     Texture2D biomeTextures[SEG_COUNT];
     for (int i = 0; i < SEG_COUNT; ++i)
     {
-        string filename = "biome" + to_string(i + 1) + ".png";
+        string filename = "assets/level/biome" + to_string(i + 1) + ".png";
         biomeTextures[i] = LoadTexture(filename.c_str());
         if (biomeTextures[i].id == 0)
         {
-            cerr << "WARNING: Could not load texture '" << filename << "'." << endl;
+            cerr << "WARNING: Could not load texture biome'" << to_string(i + 1) << ".png'." << endl;
         }
     }
 
@@ -220,9 +220,9 @@ int main(void)
 
     // Sounds
     Sound meow1Sound = { 0 };
-    if (FileExists("meow1.wav"))
+    if (FileExists("assets/sound/meow1.wav"))
     {
-        meow1Sound = LoadSound("meow1.wav");
+        meow1Sound = LoadSound("assets/sound/meow1.wav");
     }
     else
     {
@@ -230,9 +230,9 @@ int main(void)
     }
 
     Sound meow2Sound = { 0 };
-    if (FileExists("meow2.wav"))
+    if (FileExists("assets/sound/meow2.wav"))
     {
-        meow2Sound = LoadSound("meow2.wav");
+        meow2Sound = LoadSound("assets/sound/meow2.wav");
     }
     else
     {
@@ -240,9 +240,9 @@ int main(void)
     }
 
     Sound popSound = { 0 };
-    if (FileExists("pop.wav"))
+    if (FileExists("assets/sound/pop.wav"))
     {
-        popSound = LoadSound("pop.wav");
+        popSound = LoadSound("assets/sound/pop.wav");
     }
     else
     {
@@ -250,9 +250,9 @@ int main(void)
     }
 
     Sound vanishSound = { 0 };
-    if (FileExists("vanish.wav"))
+    if (FileExists("assets/sound/vanish.wav"))
     {
-        vanishSound = LoadSound("vanish.wav");
+        vanishSound = LoadSound("assets/sound/vanish.wav");
     }
     else
     {
@@ -260,9 +260,9 @@ int main(void)
     }
 
     Sound crunchSound = { 0 };
-    if (FileExists("crunch.wav"))
+    if (FileExists("assets/sound/crunch.wav"))
     {
-        crunchSound = LoadSound("crunch.wav");
+        crunchSound = LoadSound("assets/sound/crunch.wav");
     }
     else
     {
@@ -270,9 +270,9 @@ int main(void)
     }
 
     Sound jumpSound = { 0 };
-    if (FileExists("jump.wav"))
+    if (FileExists("assets/sound/jump.wav"))
     {
-        jumpSound = LoadSound("jump.wav");
+        jumpSound = LoadSound("assets/sound/jump.wav");
     }
     else
     {
@@ -280,9 +280,9 @@ int main(void)
     }
 
     Sound sprintSound = { 0 };
-    if (FileExists("sprint.wav"))
+    if (FileExists("assets/sound/sprint.wav"))
     {
-        sprintSound = LoadSound("sprint.wav");
+        sprintSound = LoadSound("assets/sound/sprint.wav");
     }
     else
     {
@@ -290,9 +290,9 @@ int main(void)
     }
 
     Sound cheerSound = { 0 };
-    if (FileExists("cheer.wav"))
+    if (FileExists("assets/sound/cheer.wav"))
     {
-        cheerSound = LoadSound("cheer.wav");
+        cheerSound = LoadSound("assets/sound/cheer.wav");
     }
     else
     {
@@ -300,7 +300,7 @@ int main(void)
     }
 
     // Background music settings
-    vector<string> playlistFiles = { "Investigations.wav", "Fluffing_a_Duck.wav", "Sneaky_Adventure.wav" };
+    vector<string> playlistFiles = { "assets/sound/Investigations.wav", "assets/sound/Fluffing_a_Duck.wav", "assets/sound/Sneaky_Adventure.wav" };
     vector<Music> musicPlaylist;
     int currentTrackIndex = -1;
 

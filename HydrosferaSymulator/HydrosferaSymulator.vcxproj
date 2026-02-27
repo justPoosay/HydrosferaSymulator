@@ -143,6 +143,39 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="assets\level\biome1.png" />
+    <Image Include="assets\level\biome2.png" />
+    <Image Include="assets\level\biome3.png" />
+    <Image Include="assets\level\biome4.png" />
+    <Image Include="assets\level\biome5.png" />
+    <Image Include="assets\level\congratulation.png" />
+    <Image Include="assets\level\finish.png" />
+    <Image Include="assets\level\grass.png" />
+    <Image Include="assets\npc\catCrunch.png" />
+    <Image Include="assets\npc\catCry.png" />
+    <Image Include="assets\npc\catPop.png" />
+    <Image Include="assets\npc\catSpinning.png" />
+    <Image Include="assets\npc\gatito.png" />
+    <Image Include="assets\player\happy.png" />
+    <Image Include="assets\player\jump.png" />
+    <Image Include="assets\player\run.png" />
+    <Image Include="assets\player\walk.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Media Include="assets\sound\BlindSpots.wav" />
+    <Media Include="assets\sound\cheer.wav" />
+    <Media Include="assets\sound\crunch.wav" />
+    <Media Include="assets\sound\Fluffing_a_Duck.wav" />
+    <Media Include="assets\sound\Investigations.wav" />
+    <Media Include="assets\sound\jump.wav" />
+    <Media Include="assets\sound\meow1.wav" />
+    <Media Include="assets\sound\meow2.wav" />
+    <Media Include="assets\sound\pop.wav" />
+    <Media Include="assets\sound\Sneaky_Adventure.wav" />
+    <Media Include="assets\sound\sprint.wav" />
+    <Media Include="assets\sound\vanish.wav" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
