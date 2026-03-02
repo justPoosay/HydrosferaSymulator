@@ -58,6 +58,22 @@ const int CATSPINNING_FRAME_WIDTH = 200;
 const int CATSPINNING_FRAME_HEIGHT = 134;
 const int CATSPINNING_FRAME_SPEED = 24;
 
+const int COINS_REQUIRED = 10;
+
+struct Coin {
+    Vector2 position;
+    bool active;
+    float bobOffset;
+};
+
+struct NPCState {
+    bool paid;
+};
+
+vector<NPCState> npcStates;
+vector<Coin> activeCoins;
+int collectedCoins = 0;
+
 struct NPC
 {
     Rectangle bounds;
@@ -143,6 +159,17 @@ void DrawWrappedText(const Font& font, const string& text, float x, float y, int
     }
 }
 
+void SpawnCoins(vector<Coin>& coins, float minX, float maxX) {
+    coins.clear();
+    for (int i = 0; i < COINS_REQUIRED; i++) {
+        coins.push_back({
+            {(float)GetRandomValue(minX, maxX), (float)GetRandomValue(100, 400)},
+            true,
+            (float)GetRandomValue(0, 1000) / 100.0f
+            });
+    }
+}
+
 int main(void)
 {
     SetConfigFlags(FLAG_WINDOW_UNDECORATED);
@@ -179,6 +206,9 @@ int main(void)
 
     Texture2D grassTexture = LoadTexture("assets/level/grass.png");
     if (grassTexture.id == 0) cerr << "WARNING: Could not load texture 'grass.png'." << endl;
+
+    Texture2D coinTexture = LoadTexture("assets/level/coin.png");
+    if (coinTexture.id == 0) cerr << "WARNING: Could not load texture 'coin.png'." << endl;
 
     Texture2D finishTexture = LoadTexture("assets/level/finish.png");
     if (finishTexture.id == 0) cerr << "WARNING: Could not load texture 'finish.png'." << endl;
@@ -408,6 +438,10 @@ int main(void)
 
     for (const auto& def : npcDefinitions)
         npcs.push_back(makeNpc(def.x, def.lines, def.spriteId, def.speech));
+
+    for (size_t i = 0; i < npcs.size(); i++) {
+        npcStates.push_back({ false });
+    }
 
     // Animation / state
     int frameCounter = 0;
@@ -822,12 +856,48 @@ int main(void)
             if (vanishSound.frameCount != 0) PlaySound(vanishSound);
         }
 
+        // Coin collection system
+        for (auto& coin : activeCoins) {
+            if (coin.active) {
+                if (CheckCollisionCircleRec(coin.position, 25, player)) {
+                    coin.active = false;
+                    collectedCoins++;
+                    if (popSound.frameCount != 0) PlaySound(popSound);
+                }
+            }
+        }
+
         // Start dialogue
         if (!finishTriggered && foundNear != -1 && activeNPC == -1 && IsKeyPressed(KEY_ENTER) && !enterConsumedForStart)
         {
             activeNPC = foundNear;
-            currentDialogueLine = 0;
-            rawDialogueText = npcs[activeNPC].lines[currentDialogueLine];
+
+            if (!npcStates[activeNPC].paid)
+            {
+                if (collectedCoins >= COINS_REQUIRED)
+                {
+                    // Faza: Podziękowanie (stan przejściowy)
+                    npcStates[activeNPC].paid = true;
+                    collectedCoins -= COINS_REQUIRED;
+                    activeCoins.clear();
+                    rawDialogueText = "Dziękuję! Te monety pomogą mi w badaniach. Teraz mogę przekazać ci moją wiedzę:";
+                    currentDialogueLine = -1; // Specjalna wartość: po tym Enterze zaczniemy od linii 0
+                }
+                else
+                {
+                    // Faza: Prośba o monety
+                    rawDialogueText = TextFormat("Witaj! Abyś mógł iść dalej, musisz zebrać %d monet rozrzuconych w powietrzu.", COINS_REQUIRED);
+                    if (activeCoins.empty()) SpawnCoins(activeCoins, npcs[activeNPC].bounds.x - 600, npcs[activeNPC].bounds.x + 600);
+                    currentDialogueLine = -2; // Specjalna wartość: po tym Enterze po prostu zamkniemy dialog
+                }
+            }
+            else
+            {
+                // Normalny dialog (NPC już opłacony)
+                currentDialogueLine = 0;
+                rawDialogueText = npcs[activeNPC].lines[currentDialogueLine];
+            }
+
             wrappedDialogueText = WordWrapText(rawDialogueText, MAX_TEXT_WIDTH, uiFont, TEXT_FONT_SIZE, 4.0f);
             textDisplayLength = 0;
             prevTextDisplayLength = 0;
@@ -882,7 +952,23 @@ int main(void)
             }
             else
             {
-                currentDialogueLine++;
+                // Logika przechodzenia między fazami dialogu
+                if (currentDialogueLine == -1)
+                {
+                    // Właśnie skończyliśmy czytać podziękowanie -> zacznij od faktycznej pierwszej linii (0)
+                    currentDialogueLine = 0;
+                }
+                else if (currentDialogueLine == -2)
+                {
+                    // Właśnie skończyliśmy czytać prośbę o monety -> wymuś zamknięcie dialogu
+                    currentDialogueLine = (int)npcs[activeNPC].lines.size();
+                }
+                else
+                {
+                    // Normalne przewijanie linii edukacyjnych
+                    currentDialogueLine++;
+                }
+
                 if (currentDialogueLine < (int)npcs[activeNPC].lines.size())
                 {
                     rawDialogueText = npcs[activeNPC].lines[currentDialogueLine];
@@ -898,6 +984,7 @@ int main(void)
                 }
                 else
                 {
+                    // Zamknięcie dialogu
                     if (sid == 1 && popSound.frameCount != 0) StopSound(popSound);
                     if (sid == 2 && crunchSound.frameCount != 0) StopSound(crunchSound);
 
@@ -1087,6 +1174,21 @@ int main(void)
             }
         }
 
+        // Draw coins
+        for (const auto& coin : activeCoins) {
+            if (coin.active) {
+                float animY = coin.position.y + sinf((float)GetTime() * 3.0f + coin.bobOffset) * 10.0f;
+                if (coinTexture.id != 0) {
+                    float scale = 40.0f / (float)coinTexture.width;
+                    DrawTextureEx(coinTexture, { coin.position.x - 20, animY - 20 }, 0, scale, WHITE);
+                }
+                else {
+                    DrawCircle((int)coin.position.x, (int)animY, 15, YELLOW);
+                    DrawCircleLines((int)coin.position.x, (int)animY, 15, GOLD);
+                }
+            }
+        }
+
         // Draw tiled grass
         int tileW = (grassTexture.id != 0) ? grassTexture.width : GRASS_TILE_SIZE;
         int groundY = SCREEN_HEIGHT - GROUND_HEIGHT;
@@ -1097,6 +1199,7 @@ int main(void)
             else
                 DrawRectangle(gx, groundY, tileW, GROUND_HEIGHT, DARKGREEN);
         }
+
 
         // Draw finish flag
         if (finishTexture.id != 0)
@@ -1316,6 +1419,17 @@ int main(void)
             DrawTextEx(uiFont, TextFormat("Active NPC: %s", activeNPC == -1 ? "NONE" : "YES"), { 10.0f, 40.0f }, 20.0f, 1.0f, DARKGRAY);
         }
 
+        // Tło licznika
+        DrawRectangle(SCREEN_WIDTH - 180, 20, 160, 50, ColorAlpha(BLACK, 0.5f));
+        if (coinTexture.id != 0) {
+            float scale = 30.0f / coinTexture.width;
+            DrawTextureEx(coinTexture, { (float)SCREEN_WIDTH - 170, 30 }, 0, scale, WHITE);
+        }
+        else {
+            DrawCircle(SCREEN_WIDTH - 155, 45, 10, YELLOW);
+        }
+        DrawTextEx(uiFont, TextFormat("x %d", collectedCoins), { (float)SCREEN_WIDTH - 130, 30 }, 30, 2, WHITE);
+
         EndDrawing();
     }
 
@@ -1330,6 +1444,7 @@ int main(void)
     UnloadTexture(catSpinningTexture);
 
     if (grassTexture.id != 0) UnloadTexture(grassTexture);
+    if (coinTexture.id != 0) UnloadTexture(coinTexture);
     for (int i = 0; i < SEG_COUNT; ++i)
         if (biomeTextures[i].id != 0) UnloadTexture(biomeTextures[i]);
 
