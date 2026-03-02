@@ -1,6 +1,6 @@
 # Wpływ człowieka na hydrosferę Ziemi
 
-## Krótki symulator
+## Krótki RPG
 
 ### Sterowanie:
 - `WASD/strzałki` - ruch
